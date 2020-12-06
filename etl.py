@@ -1,6 +1,5 @@
-# transform headers to UPPERCASE
-# split file into multiple files according entity/subentity
-# children files must have the same format as the parent file
+# Author: Gabriel Torres
+# Email: gabtorres1011@gmail.com
 
 # Uses Python's native packages so that 
 # you don't need to install big dependencies
@@ -11,8 +10,24 @@ import sqlite3
 import csv
 
 class etl():
+	"""
+	Interactive Extract-Transform-Load class for transforming 
+	input .csv file headers and splitting the parent file into 
+	children files based on unique SUB_ENTITY values.
 
-	def __init__(self,input_fpath,output_fpath):
+	ATTRIBUTES
+	----------
+	input_fpath : Filepath of input .csv file
+	output_fpath : Output filepath specified by user. Defaults to same directory as script.
+	file_bin : File binary of input .csv file
+	data : Data from input .csv without header
+	header : Input .csv header string
+	ddl : String data definition language for creating temporary sqlite3 table
+	connection : SQLITE3 database connection
+	cursor : Database connection cursor
+	"""
+
+	def __init__(self,input_fpath,output_fpath=""):
 
 		self.input_fpath = input_fpath
 		self.out_fpath = output_fpath
@@ -26,25 +41,35 @@ class etl():
 		self.connection = None
 		self.cursor = None
 
-	def extract(self):
+	def open_file(self):
 
 		self.file_bin = open(self.input_fpath,'r')
+
+		return
 
 	def read(self):
 		
 		self.data = self.file_bin.readlines()
 
+		return
+
 	def create_db(self):
 
 		self.connection = sqlite3.connect(':memory:')
+
+		return
 
 	def create_cursor(self):
 
 		self.cursor = self.connection.cursor()
 
+		return
+
 	def transform_header(self):
 
 		self.header = self.data[0].upper().replace('\n','')
+
+		return
 
 	def build_ddl(self):
 		"""
@@ -57,6 +82,8 @@ class etl():
 		fields = '(' + ', '.join(q_string) + ')'
 
 		self.ddl = '''CREATE TABLE tmp ''' + fields
+
+		return
 		
 	def build_tmp(self):
 		"""
@@ -103,6 +130,8 @@ class etl():
 				for result in self.cursor:
 					csv_out.writerow(result)
 
+		return
+
 	def close_cnxn(self):
 
 		self.connection.close()
@@ -132,11 +161,15 @@ def main():
 	in_fpath = r'data/example-file.csv'
 	out_fpath = r'data/'
 
-	transformer = etl(in_fpath,out_fpath)
+	transformer = etl(in_fpath)
 
-	transformer.extract()
+	######## EXTRACT TASKS ########
+
+	transformer.open_file()
 
 	transformer.read()
+
+	######## TRANSFORM AND LOAD TASKS ########
 
 	transformer.transform_header()
 
@@ -150,9 +183,12 @@ def main():
 
 	transformer.split()
 
+	######## CLEAN-UP TASKS ########
+
 	transformer.close_cnxn()
 
 	transformer.close_file()
+
 
 if __name__ == '__main__':
 	main()
