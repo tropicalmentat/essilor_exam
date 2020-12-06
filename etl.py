@@ -14,26 +14,37 @@ class etl():
 
 	def __init__(self,input_fpath,output_fpath):
 
-		self.data = self.extract(input_fpath)
-		self.header = self.transform_header()
-		self.ddl = self.build_ddl()
-
-		self.connection = self.create_db()
-		self.cursor = self.connection.cursor()
-
+		self.input_fpath = input_fpath
 		self.out_fpath = output_fpath
 
-	def extract(self,input_fpath):
+		self.file_bin = None
 
-		data = open(input_fpath,'r')
+		self.data = None
+		self.header = None
+		self.ddl = None
 
-		return data.readlines()
+		self.connection = None
+		self.cursor = None
+
+	def extract(self):
+
+		self.file_bin = open(self.input_fpath,'r')
+
+	def read(self):
+		
+		self.data = self.file_bin.readlines()
 
 	def create_db(self):
-		return sqlite3.connect(':memory:')
+
+		self.connection = sqlite3.connect(':memory:')
+
+	def create_cursor(self):
+
+		self.cursor = self.connection.cursor()
 
 	def transform_header(self):
-		return self.data[0].upper().replace('\n','')
+
+		self.header = self.data[0].upper().replace('\n','')
 
 	def build_ddl(self):
 		"""
@@ -45,7 +56,7 @@ class etl():
 
 		fields = '(' + ', '.join(q_string) + ')'
 
-		return '''CREATE TABLE tmp ''' + fields
+		self.ddl = '''CREATE TABLE tmp ''' + fields
 		
 	def build_tmp(self):
 		"""
@@ -81,7 +92,7 @@ class etl():
 		uniq = [v[0] for v in self.cursor.fetchall()]
 
 		for v in uniq:
-			print(v)
+			
 			self.cursor.execute('SELECT * FROM tmp WHERE SUB_ENTITY="{}"'.format(v))
 
 			with open(os.path.join(self.out_fpath,'{}.csv'.format(v)),"w") as output:
@@ -92,6 +103,29 @@ class etl():
 				for result in self.cursor:
 					csv_out.writerow(result)
 
+	def close_cnxn(self):
+
+		self.connection.close()
+
+		return
+
+	def close_file(self):
+
+		self.file_bin.close()
+
+		return
+
+	def change_input_fpath(self,new_input_fpath):
+
+		self.input_fpath = new_input_fpath
+
+		return
+
+	def change_input_fpath(self,old_output_fpath):
+
+		self.output_fpath = old_output_fpath
+
+		return
 
 def main():
 	
@@ -100,9 +134,25 @@ def main():
 
 	transformer = etl(in_fpath,out_fpath)
 
+	transformer.extract()
+
+	transformer.read()
+
+	transformer.transform_header()
+
+	transformer.create_db()
+
+	transformer.create_cursor()
+
+	transformer.build_ddl()
+
 	transformer.build_tmp()
 
 	transformer.split()
+
+	transformer.close_cnxn()
+
+	transformer.close_file()
 
 if __name__ == '__main__':
 	main()
